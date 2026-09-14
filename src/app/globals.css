@@ -1,26 +1,183 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --radius: 0.625rem;
+
+  /* Neutrals — cool sage-tinted, matches the product's teal identity */
+  --background: #f4f7f5;
+  --foreground: #16211a;
+  --card: #ffffff;
+  --card-foreground: #16211a;
+  --popover: #ffffff;
+  --popover-foreground: #16211a;
+  --muted: #eef3f0;
+  --muted-foreground: #69766d;
+  --border: #e3e9e5;
+  --input: #dee6e1;
+  --ring: #146356;
+
+  /* Brand */
+  --primary: #146356;
+  --primary-foreground: #ffffff;
+  --secondary: #eef3f0;
+  --secondary-foreground: #16211a;
+  --accent: #e4efea;
+  --accent-foreground: #146356;
+  --destructive: #d03b3b;
+  --destructive-foreground: #ffffff;
+
+  /* Status (fixed, never themed to a category) */
+  --status-good: #0ca30c;
+  --status-good-bg: #e8f7e4;
+  --status-warning: #b7791f;
+  --status-warning-bg: #fbf0dc;
+  --status-critical: #d03b3b;
+  --status-critical-bg: #fbeaea;
+
+  /* Category identity colors — fixed order/assignment, never cycled or reused for status */
+  --cat-groceries: #008300;
+  --cat-transportation: #2a78d6;
+  --cat-utilities: #eb6834;
+  --cat-communications: #6b6d72;
+  --cat-evictions: #e34948;
+  --cat-daycare: #1baf7a;
+  --cat-entertainment: #e87ba4;
+  --cat-shopping: #eda100;
+  --cat-bills: #4a3aa7;
+  --cat-other: #9a9c9f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #10150f;
+    --foreground: #e7ece3;
+    --card: #171d16;
+    --card-foreground: #e7ece3;
+    --popover: #171d16;
+    --popover-foreground: #e7ece3;
+    --muted: #1e2620;
+    --muted-foreground: #a2ad9c;
+    --border: #313c31;
+    --input: #313c31;
+    --ring: #55c7ab;
+
+    --primary: #55c7ab;
+    --primary-foreground: #0d1a15;
+    --secondary: #1e2620;
+    --secondary-foreground: #e7ece3;
+    --accent: #1c2f2a;
+    --accent-foreground: #55c7ab;
+    --destructive: #e66767;
+    --destructive-foreground: #170a0a;
+
+    --status-good: #3fbf3f;
+    --status-good-bg: #123312;
+    --status-warning: #e3b455;
+    --status-warning-bg: #332a17;
+    --status-critical: #e66767;
+    --status-critical-bg: #331717;
+  }
+}
+
+.dark {
+  --background: #10150f;
+  --foreground: #e7ece3;
+  --card: #171d16;
+  --card-foreground: #e7ece3;
+  --popover: #171d16;
+  --popover-foreground: #e7ece3;
+  --muted: #1e2620;
+  --muted-foreground: #a2ad9c;
+  --border: #313c31;
+  --input: #313c31;
+  --ring: #55c7ab;
+
+  --primary: #55c7ab;
+  --primary-foreground: #0d1a15;
+  --secondary: #1e2620;
+  --secondary-foreground: #e7ece3;
+  --accent: #1c2f2a;
+  --accent-foreground: #55c7ab;
+  --destructive: #e66767;
+  --destructive-foreground: #170a0a;
+
+  --status-good: #3fbf3f;
+  --status-good-bg: #123312;
+  --status-warning: #e3b455;
+  --status-warning-bg: #332a17;
+  --status-critical: #e66767;
+  --status-critical-bg: #331717;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-status-good: var(--status-good);
+  --color-status-good-bg: var(--status-good-bg);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-critical: var(--status-critical);
+  --color-status-critical-bg: var(--status-critical-bg);
+
+  --color-cat-groceries: var(--cat-groceries);
+  --color-cat-transportation: var(--cat-transportation);
+  --color-cat-utilities: var(--cat-utilities);
+  --color-cat-communications: var(--cat-communications);
+  --color-cat-evictions: var(--cat-evictions);
+  --color-cat-daycare: var(--cat-daycare);
+  --color-cat-entertainment: var(--cat-entertainment);
+  --color-cat-shopping: var(--cat-shopping);
+  --color-cat-bills: var(--cat-bills);
+  --color-cat-other: var(--cat-other);
+
+  /*
+   * A system-font stack, not a Google Fonts import: this is an
+   * installable, offline-first PWA, so the UI shouldn't depend on a
+   * network fetch to a font CDN just to render text. Every platform's
+   * native UI font already looks native here, loads instantly, and needs
+   * no service-worker caching strategy of its own.
+   */
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Consolas, "Liberation Mono", monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
