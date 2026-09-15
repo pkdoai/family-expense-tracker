@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { Download } from "lucide-react";
 
 import { useSettings } from "@/lib/hooks/use-settings";
@@ -9,6 +10,7 @@ import { weekNumberForDate } from "@/lib/domain/week";
 import { expensesToCsv, csvFilename, downloadCsv } from "@/lib/domain/csv";
 import { totalCents } from "@/lib/domain/dashboard-stats";
 import { formatCents } from "@/lib/domain/currency";
+import { CATEGORY_IDS } from "@/lib/domain/types";
 import type { ExpenseFilters } from "@/lib/domain/types";
 
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
@@ -18,10 +20,43 @@ import { Button } from "@/components/ui/button";
 import { ListRowSkeleton } from "@/components/shared/loading-skeleton";
 import { Card } from "@/components/ui/card";
 
-export default function ExpensesPage() {
+/**
+ * Reads a `?week=` and/or `?category=` param — set by the command palette's
+ * "Jump to a week" / "Filter by category" entries — and folds it into the
+ * starting filter state, so those links actually land pre-filtered instead
+ * of on an unfiltered list. Wrapped in Suspense below because Next.js
+ * requires that anywhere useSearchParams() is used.
+ */
+function useFiltersFromSearchParams(): ExpenseFilters {
+  const searchParams = useSearchParams();
+  return React.useMemo(() => {
+    const week = searchParams.get("week");
+    const category = searchParams.get("category");
+    const weekNumber = week ? Number(week) : NaN;
+    return {
+      ...NO_FILTERS,
+      week: Number.isInteger(weekNumber) && weekNumber > 0 ? weekNumber : "all",
+      category: category && (CATEGORY_IDS as readonly string[]).includes(category) ? (category as ExpenseFilters["category"]) : "all",
+    };
+  }, [searchParams]);
+}
+
+function ExpensesPageInner() {
   const { settings, loaded: settingsLoaded } = useSettings();
   const { expenses, loading: expensesLoading } = useExpenses();
-  const [filters, setFilters] = React.useState<ExpenseFilters>(NO_FILTERS);
+  const initialFilters = useFiltersFromSearchParams();
+  const [filters, setFilters] = React.useState<ExpenseFilters>(initialFilters);
+
+  // Re-apply whenever the URL's week/category param changes — e.g. picking
+  // a different week from the command palette while already on this page.
+  // This mirrors a prop change, not an external system, but the palette
+  // navigates via router.push rather than a remount, so there's no other
+  // lifecycle point to catch the new param.
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFilters(initialFilters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFilters.week, initialFilters.category]);
 
   const filtered = React.useMemo(() => {
     return expenses
@@ -76,5 +111,13 @@ export default function ExpensesPage() {
         <ExpenseList expenses={filtered} hasAnyExpenses={expenses.length > 0} />
       )}
     </div>
+  );
+}
+
+export default function ExpensesPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <ExpensesPageInner />
+    </React.Suspense>
   );
 }

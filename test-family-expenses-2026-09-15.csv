@@ -1,0 +1,14 @@
+Family,Date,Week,Category,Sub-category,Payment Method,Description,Amount (USD)
+Test Family,2026-09-16,Week 2,Other,Pharmacy,Debit card,Riverside Pharmacy,25.53
+Test Family,2026-09-15,Week 2,Daycare,,,Sunnyside Learning Center,177.55
+Test Family,2026-09-14,Week 2,Shopping,,,Cedar Street Outfitters,55.18
+Test Family,2026-09-14,Week 2,Groceries,,,Harborview Market,47.66
+Test Family,2026-09-14,Week 2,Transportation,,,Metro Transit — weekly pass,40.96
+Test Family,2026-09-13,Week 1,Groceries,,,Harborview Market,64.35
+Test Family,2026-09-13,Week 1,Groceries,,,Corner Fresh Grocer,25.29
+Test Family,2026-09-12,Week 1,Transportation,,,Metro Transit — weekly pass,43.78
+Test Family,2026-09-10,Week 1,Groceries,,,Harborview Market,70.11
+Test Family,2026-09-10,Week 1,Daycare,,,Sunnyside Learning Center,174.38
+Test Family,2026-09-09,Week 1,Groceries,,,Harborview Market,104.01
+Test Family,2026-09-09,Week 1,Groceries,,,Corner Fresh Grocer,43.06
+Test Family,2026-09-07,Week 1,Utilities,,,Municipal Water Dept.,43.85
