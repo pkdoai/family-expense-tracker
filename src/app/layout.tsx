@@ -6,6 +6,8 @@ import { AppHeader } from "@/components/layout/app-header";
 import { ProgramProgress } from "@/components/layout/program-progress";
 import { OnboardingGate } from "@/components/layout/onboarding-gate";
 import { CommandPalette } from "@/components/layout/command-palette";
+import { AppFooter } from "@/components/layout/app-footer";
+import { UnsavedBanner } from "@/components/layout/unsaved-banner";
 import { ServiceWorkerRegistration } from "@/components/shared/service-worker-registration";
 
 export const metadata: Metadata = {
@@ -32,11 +34,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AppProviders>
           <ServiceWorkerRegistration />
           <AppHeader />
+          <UnsavedBanner />
           <ProgramProgress />
           <CommandPalette />
           <main className="flex flex-1 flex-col">
             <OnboardingGate>{children}</OnboardingGate>
           </main>
+          <AppFooter />
         </AppProviders>
       </body>
     </html>

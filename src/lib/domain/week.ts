@@ -39,18 +39,36 @@ export function programStartDate(program: ProgramSettings): Date {
   return startOfDay(parseISO(program.startDate));
 }
 
+/** First week number: 0 for a spending-plan program (Week 0 is the planning week), otherwise 1. */
+export function firstWeekNumber(program: ProgramSettings): number {
+  return program.fixedWeeks ? 0 : 1;
+}
+
+export function lastWeekNumber(program: ProgramSettings): number {
+  return firstWeekNumber(program) + program.lengthWeeks - 1;
+}
+
+/** Every week number in the program, in order. */
+export function weekNumbers(program: ProgramSettings): number[] {
+  const first = firstWeekNumber(program);
+  return Array.from({ length: program.lengthWeeks }, (_, i) => first + i);
+}
+
 /** Inclusive end date of the program. */
 export function programEndDate(program: ProgramSettings): Date {
   return addDays(programStartDate(program), program.lengthWeeks * 7 - 1);
 }
 
+/** Start of the first week (Week 0 for a spending plan, otherwise the boundary-aligned Week 1). */
 export function week1Start(program: ProgramSettings): Date {
-  return calendarWeekStart(programStartDate(program), program.weekBoundary);
+  return program.fixedWeeks
+    ? programStartDate(program)
+    : calendarWeekStart(programStartDate(program), program.weekBoundary);
 }
 
 /** Start/end (inclusive) of a given 1-based week number. */
 export function weekRange(program: ProgramSettings, weekNumber: number): { start: Date; end: Date } {
-  const start = addDays(week1Start(program), (weekNumber - 1) * 7);
+  const start = addDays(week1Start(program), (weekNumber - firstWeekNumber(program)) * 7);
   return { start, end: addDays(start, 6) };
 }
 
@@ -61,6 +79,9 @@ export function weekRange(program: ProgramSettings, weekNumber: number): { start
 export function weekNumberForDate(program: ProgramSettings, date: Date): number | null {
   const d = startOfDay(date);
   if (d < programStartDate(program) || d > programEndDate(program)) return null;
+  if (program.fixedWeeks) {
+    return Math.floor(differenceInCalendarDays(d, programStartDate(program)) / 7);
+  }
   const days = differenceInCalendarDays(calendarWeekStart(d, program.weekBoundary), week1Start(program));
   return Math.floor(days / 7) + 1;
 }
@@ -71,7 +92,7 @@ export function isDateWithinProgram(program: ProgramSettings, date: Date): boole
 }
 
 export interface ProgramProgress {
-  /** Current week number, clamped to [1, lengthWeeks]. Null before the program starts. */
+  /** Current week number, clamped to the program's first/last week. Null before the program starts. */
   currentWeek: number | null;
   daysElapsed: number;
   daysRemaining: number;
@@ -97,7 +118,7 @@ export function getProgramProgress(program: ProgramSettings, today: Date = new D
 
   let currentWeek: number | null = null;
   if (hasStarted) {
-    currentWeek = hasEnded ? program.lengthWeeks : (weekNumberForDate(program, t) ?? program.lengthWeeks);
+    currentWeek = hasEnded ? lastWeekNumber(program) : (weekNumberForDate(program, t) ?? lastWeekNumber(program));
   }
 
   return { currentWeek, daysElapsed, daysRemaining, totalDays, percentComplete, hasStarted, hasEnded };

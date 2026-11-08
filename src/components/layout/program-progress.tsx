@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 
 import { useSettings } from "@/lib/hooks/use-settings";
-import { getProgramProgress, programStartDate, programEndDate } from "@/lib/domain/week";
+import { getProgramProgress, programStartDate, programEndDate, lastWeekNumber } from "@/lib/domain/week";
 import { Progress } from "@/components/ui/progress";
 
 export function ProgramProgress() {
@@ -17,7 +17,7 @@ export function ProgramProgress() {
       <div className="flex items-baseline gap-2">
         <span className="text-[13px] font-semibold">
           {progress.hasStarted
-            ? `Week ${progress.currentWeek} of ${settings.program.lengthWeeks}`
+            ? `Week ${progress.currentWeek} of ${lastWeekNumber(settings.program)}`
             : `Starts ${format(start, "MMM d, yyyy")}`}
         </span>
         <span className="text-xs text-muted-foreground">

@@ -1,6 +1,7 @@
 import { IndexedDbExpenseRepository } from "@/lib/storage/expense-repository";
 import { IndexedDbPhotoRepository } from "@/lib/storage/photo-repository";
 import { LocalStorageSettingsRepository } from "@/lib/storage/settings-repository";
+import { IndexedDbWorkbookRepository } from "@/lib/storage/workbook-repository";
 import { BackupService } from "@/lib/storage/backup-service";
 
 /**
@@ -12,4 +13,10 @@ import { BackupService } from "@/lib/storage/backup-service";
 export const expenseRepository = new IndexedDbExpenseRepository();
 export const photoRepository = new IndexedDbPhotoRepository();
 export const settingsRepository = new LocalStorageSettingsRepository();
-export const backupService = new BackupService(expenseRepository, photoRepository, settingsRepository);
+export const workbookRepository = new IndexedDbWorkbookRepository();
+export const backupService = new BackupService(
+  expenseRepository,
+  photoRepository,
+  settingsRepository,
+  workbookRepository,
+);

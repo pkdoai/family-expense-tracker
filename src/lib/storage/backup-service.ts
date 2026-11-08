@@ -2,9 +2,11 @@ import type { AppSettings, Expense, ExpensePhoto } from "@/lib/domain/types";
 import type { ExpenseRepository } from "@/lib/storage/expense-repository";
 import type { PhotoRepository } from "@/lib/storage/photo-repository";
 import type { SettingsRepository } from "@/lib/storage/settings-repository";
+import type { WorkbookRepository } from "@/lib/storage/workbook-repository";
+import type { SheetWrite, WorkbookSummary } from "@/lib/workbook/types";
 import { getDb } from "@/lib/storage/db";
 
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 interface SerializedPhoto {
   id: string;
@@ -14,17 +16,30 @@ interface SerializedPhoto {
   dataBase64: string;
 }
 
+interface SerializedWorkbook {
+  fileName: string;
+  dataBase64: string;
+  summary: WorkbookSummary;
+  loadedAt: string;
+  savedAt: string | null;
+  pendingRemovals: SheetWrite[];
+}
+
 export interface BackupPayload {
   version: number;
   exportedAt: string;
   settings: AppSettings;
   expenses: Expense[];
   photos: SerializedPhoto[];
+  /** Added in version 2; absent in older backups. */
+  workbook?: SerializedWorkbook | null;
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
+  return bytesToBase64(new Uint8Array(await blob.arrayBuffer()));
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
   const chunkSize = 0x8000;
   for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -33,11 +48,15 @@ async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
-function base64ToBlob(base64: string, contentType: string): Blob {
+function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: contentType });
+  return bytes;
+}
+
+function base64ToBlob(base64: string, contentType: string): Blob {
+  return new Blob([base64ToBytes(base64)], { type: contentType });
 }
 
 /**
@@ -51,6 +70,7 @@ export class BackupService {
     private readonly expenses: ExpenseRepository,
     private readonly photos: PhotoRepository,
     private readonly settings: SettingsRepository,
+    private readonly workbooks: WorkbookRepository,
   ) {}
 
   async export(): Promise<BackupPayload> {
@@ -67,12 +87,24 @@ export class BackupService {
       })),
     );
 
+    const wb = await this.workbooks.get();
+
     return {
       version: BACKUP_VERSION,
       exportedAt: new Date().toISOString(),
       settings: this.settings.get(),
       expenses: expenseList,
       photos: serializedPhotos,
+      workbook: wb
+        ? {
+            fileName: wb.fileName,
+            dataBase64: bytesToBase64(new Uint8Array(wb.base)),
+            summary: wb.summary,
+            loadedAt: wb.loadedAt,
+            savedAt: wb.savedAt,
+            pendingRemovals: wb.pendingRemovals,
+          }
+        : null,
     };
   }
 
@@ -109,6 +141,20 @@ export class BackupService {
       });
     }
     await tx.done;
+
+    if (payload.workbook) {
+      const w = payload.workbook;
+      await this.workbooks.put({
+        fileName: w.fileName,
+        base: base64ToBytes(w.dataBase64).buffer,
+        summary: w.summary,
+        loadedAt: w.loadedAt,
+        savedAt: w.savedAt,
+        pendingRemovals: w.pendingRemovals ?? [],
+      });
+    } else {
+      await this.workbooks.clear();
+    }
   }
 
   async importFromFile(file: File): Promise<void> {

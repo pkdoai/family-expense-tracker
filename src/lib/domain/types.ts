@@ -6,20 +6,14 @@
  * storage and UI can both depend on them without depending on each other.
  */
 
-export const CATEGORY_IDS = [
-  "groceries",
-  "transportation",
-  "utilities",
-  "communications",
-  "evictions",
-  "daycare",
-  "entertainment",
-  "shopping",
-  "bills",
-  "other",
-] as const;
+import type { PaymentType, SheetWrite } from "@/lib/workbook/types";
 
-export type CategoryId = (typeof CATEGORY_IDS)[number];
+/**
+ * A category id. In a loaded spending plan this is the workbook row ("row-17");
+ * older backups may still carry the original built-in ids, which are simply
+ * shown as-is.
+ */
+export type CategoryId = string;
 
 export const WEEK_BOUNDARIES = ["sunday", "monday"] as const;
 export type WeekBoundary = (typeof WEEK_BOUNDARIES)[number];
@@ -46,6 +40,12 @@ export interface Expense {
   /** Only meaningful when category === "other" (per the current product decision). */
   paymentMethod?: string;
   photoIds: string[];
+  /** How it was paid — required for expense categories in a loaded spending plan. */
+  paymentType?: PaymentType;
+  /** What this entry should look like in the spreadsheet (null/absent = nothing to write). */
+  write?: SheetWrite | null;
+  /** What the last saved copy of the spreadsheet already contains for this entry. */
+  committed?: SheetWrite | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +61,12 @@ export interface ProgramSettings {
   startDate: string;
   lengthWeeks: number;
   weekBoundary: WeekBoundary;
+  /**
+   * True when the program comes from a spending plan workbook: weeks are
+   * fixed 7-day blocks counted from the start date, numbered from 0, with
+   * `lengthWeeks` total (Week 0 through Week lengthWeeks-1).
+   */
+  fixedWeeks?: boolean;
 }
 
 export interface BudgetSettings {

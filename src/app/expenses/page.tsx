@@ -9,8 +9,9 @@ import { useExpenses } from "@/lib/hooks/use-expenses";
 import { weekNumberForDate } from "@/lib/domain/week";
 import { expensesToCsv, csvFilename, downloadCsv } from "@/lib/domain/csv";
 import { totalCents } from "@/lib/domain/dashboard-stats";
+import { spendingOnly } from "@/lib/domain/plan-stats";
+import { useCategories } from "@/lib/hooks/use-workbook";
 import { formatCents } from "@/lib/domain/currency";
-import { CATEGORY_IDS } from "@/lib/domain/types";
 import type { ExpenseFilters } from "@/lib/domain/types";
 
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
@@ -29,21 +30,23 @@ import { Card } from "@/components/ui/card";
  */
 function useFiltersFromSearchParams(): ExpenseFilters {
   const searchParams = useSearchParams();
+  const categories = useCategories();
   return React.useMemo(() => {
     const week = searchParams.get("week");
     const category = searchParams.get("category");
     const weekNumber = week ? Number(week) : NaN;
     return {
       ...NO_FILTERS,
-      week: Number.isInteger(weekNumber) && weekNumber > 0 ? weekNumber : "all",
-      category: category && (CATEGORY_IDS as readonly string[]).includes(category) ? (category as ExpenseFilters["category"]) : "all",
+      week: Number.isInteger(weekNumber) && weekNumber >= 0 ? weekNumber : "all",
+      category: category && categories.list.some((c) => c.id === category) ? category : "all",
     };
-  }, [searchParams]);
+  }, [searchParams, categories]);
 }
 
 function ExpensesPageInner() {
   const { settings, loaded: settingsLoaded } = useSettings();
   const { expenses, loading: expensesLoading } = useExpenses();
+  const categories = useCategories();
   const initialFilters = useFiltersFromSearchParams();
   const [filters, setFilters] = React.useState<ExpenseFilters>(initialFilters);
 
@@ -76,7 +79,7 @@ function ExpensesPageInner() {
   const loading = !settingsLoaded || expensesLoading;
 
   function handleExport() {
-    const csv = expensesToCsv(filtered, settings.program, settings.family.familyName || "Family");
+    const csv = expensesToCsv(filtered, settings.program, settings.family.familyName || "Family", categories);
     downloadCsv(csv, csvFilename(settings.family.familyName || "family"));
   }
 
@@ -86,7 +89,7 @@ function ExpensesPageInner() {
         <div>
           <h1 className="text-lg font-semibold">Expenses</h1>
           <p className="text-sm text-muted-foreground">
-            {filtered.length} expense{filtered.length === 1 ? "" : "s"} &middot; {formatCents(totalCents(filtered))}
+            {filtered.length} entr{filtered.length === 1 ? "y" : "ies"} &middot; {formatCents(totalCents(spendingOnly(filtered, categories)))} spent
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -98,7 +101,7 @@ function ExpensesPageInner() {
         </div>
       </div>
 
-      <ExpenseFiltersBar filters={filters} onChange={setFilters} lengthWeeks={settings.program.lengthWeeks} />
+      <ExpenseFiltersBar filters={filters} onChange={setFilters} program={settings.program} />
 
       {loading ? (
         <Card className="p-5">

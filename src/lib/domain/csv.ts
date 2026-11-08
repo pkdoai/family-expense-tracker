@@ -1,7 +1,9 @@
+import type { CategoryIndex } from "@/lib/domain/categories";
+import { SECTION_LABEL } from "@/lib/domain/categories";
 import type { Expense, ProgramSettings } from "@/lib/domain/types";
-import { getCategory } from "@/lib/domain/categories";
 import { weekNumberForDate } from "@/lib/domain/week";
 import { centsToDollars } from "@/lib/domain/currency";
+import { paymentTypeLabel } from "@/lib/workbook/types";
 
 function escapeCsvField(value: string): string {
   if (/[",\n]/.test(value)) {
@@ -19,27 +21,20 @@ export function expensesToCsv(
   expenses: Expense[],
   program: ProgramSettings,
   familyName: string,
+  categories: CategoryIndex,
 ): string {
-  const header = [
-    "Family",
-    "Date",
-    "Week",
-    "Category",
-    "Sub-category",
-    "Payment Method",
-    "Description",
-    "Amount (USD)",
-  ];
+  const header = ["Family", "Date", "Week", "Type", "Category", "Paid With", "Description", "Amount (USD)"];
 
   const rows = expenses.map((expense) => {
     const week = weekNumberForDate(program, new Date(expense.date));
+    const category = categories.get(expense.category);
     return [
       familyName,
       expense.date,
-      week ? `Week ${week}` : "",
-      getCategory(expense.category).label,
-      expense.subcategory ?? "",
-      expense.paymentMethod ?? "",
+      week !== null ? `Week ${week}` : "",
+      category.section === "unknown" ? "" : SECTION_LABEL[category.section],
+      category.label,
+      expense.paymentType ? paymentTypeLabel(expense.paymentType) : "",
       expense.description,
       centsToDollars(expense.amountCents).toFixed(2),
     ];

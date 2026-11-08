@@ -1,40 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { Sparkles, Download, Upload, Trash2 } from "lucide-react";
+import { Download, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
-import { useSettings } from "@/lib/hooks/use-settings";
 import { useExpenses } from "@/lib/hooks/use-expenses";
-import { generateSampleExpenses } from "@/lib/storage/sample-data";
 import { backupService } from "@/lib/storage/repositories";
 
 export function DataTools() {
-  const { settings } = useSettings();
-  const { replaceAll, clearAll, expenses } = useExpenses();
-  const [confirmSample, setConfirmSample] = React.useState(false);
+  const { clearAll } = useExpenses();
   const [confirmClear, setConfirmClear] = React.useState(false);
   const [confirmRestore, setConfirmRestore] = React.useState<File | null>(null);
   const [busy, setBusy] = React.useState(false);
   const restoreInputRef = React.useRef<HTMLInputElement>(null);
-
-  async function loadSampleData() {
-    setBusy(true);
-    try {
-      const sample = generateSampleExpenses(settings.program);
-      await replaceAll(sample);
-      toast.success(`Loaded ${sample.length} sample expenses`);
-    } catch {
-      toast.error("Couldn't load sample data — please try again.");
-    } finally {
-      setBusy(false);
-      setConfirmSample(false);
-    }
-  }
 
   async function handleClearAll() {
     setBusy(true);
@@ -97,25 +79,10 @@ export function DataTools() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Sample Data</CardTitle>
-          <CardDescription>
-            Preview the dashboard and charts with realistic sample expenses spread across your program so far.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button variant="outline" onClick={() => setConfirmSample(true)} disabled={busy}>
-            <Sparkles className="size-3.5" />
-            Load sample data
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>Backup &amp; Restore</CardTitle>
           <CardDescription>
-            Export everything — expenses, receipt photos, and settings — as a JSON file, or restore from a previous
-            backup. Useful before clearing your browser or moving to a new device.
+            Export everything — entries, receipt photos, and the loaded spreadsheet — as a JSON file, or restore from a
+            previous backup. Useful before clearing your browser or moving to a new phone.
           </CardDescription>
         </CardHeader>
         <CardFooter className="gap-2">
@@ -140,10 +107,10 @@ export function DataTools() {
       <Card className="border-destructive/30">
         <CardHeader>
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Permanently delete every expense and receipt photo. Settings are kept.</CardDescription>
+          <CardDescription>Remove every entry, receipt photo and the loaded spreadsheet from this device. Anything you already saved into your spreadsheet stays in it.</CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button variant="destructive" onClick={() => setConfirmClear(true)} disabled={busy || expenses.length === 0}>
+          <Button variant="destructive" onClick={() => setConfirmClear(true)} disabled={busy}>
             <Trash2 className="size-3.5" />
             Clear all data
           </Button>
@@ -151,20 +118,10 @@ export function DataTools() {
       </Card>
 
       <ConfirmDialog
-        open={confirmSample}
-        onOpenChange={setConfirmSample}
-        title="Load sample data?"
-        description="This replaces any existing expenses with generated sample data. Export a backup first if you want to keep what's there now."
-        confirmLabel="Load sample data"
-        destructive={expenses.length > 0}
-        onConfirm={loadSampleData}
-      />
-
-      <ConfirmDialog
         open={confirmClear}
         onOpenChange={setConfirmClear}
         title="Clear all data?"
-        description="This permanently deletes every expense and receipt photo. This can't be undone."
+        description="This removes every entry, receipt photo and the loaded spreadsheet from this device. Entries already saved into your spreadsheet stay in it, but anything not yet saved is lost. Export a backup first if unsure."
         confirmLabel="Clear all data"
         destructive
         onConfirm={handleClearAll}

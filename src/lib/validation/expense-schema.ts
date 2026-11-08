@@ -1,8 +1,11 @@
 import { z } from "zod";
-
-import { CATEGORY_IDS, type ProgramSettings } from "@/lib/domain/types";
-import { isDateWithinProgram, programStartDate, programEndDate } from "@/lib/domain/week";
 import { format } from "date-fns";
+
+import type { CategoryIndex } from "@/lib/domain/categories";
+import type { ProgramSettings } from "@/lib/domain/types";
+import { isDateWithinProgram, programStartDate, programEndDate } from "@/lib/domain/week";
+
+const PAYMENT_IDS = ["cash", "debit", "cashapp", "credit"] as const;
 
 export const expenseFormBaseSchema = z.object({
   date: z.string().min(1, "Pick a date"),
@@ -10,21 +13,20 @@ export const expenseFormBaseSchema = z.object({
     .number({ error: "Enter an amount" })
     .positive("Amount must be greater than $0")
     .max(999_999, "That amount looks too large"),
-  category: z.enum(CATEGORY_IDS),
+  category: z.string().min(1, "Choose a category"),
   description: z.string().trim().min(1, "Add a short description").max(200, "Keep it under 200 characters"),
-  subcategory: z.string().trim().max(80).optional().or(z.literal("")),
-  paymentMethod: z.string().trim().max(80).optional().or(z.literal("")),
+  paymentType: z.enum(PAYMENT_IDS).optional(),
 });
 
 export type ExpenseFormValues = z.infer<typeof expenseFormBaseSchema>;
 
 /**
- * The date-range check depends on the current program settings, so this is
- * a schema *factory* rather than a static schema — the program is captured
- * once per form instance and every validation run uses the same rule the
- * date picker itself is constrained to.
+ * The date-range and payment-type checks depend on the loaded spending plan,
+ * so this is a schema *factory*: the program and categories are captured once
+ * per form instance, and every validation run uses the same rules the form's
+ * own date picker and payment field are built from.
  */
-export function buildExpenseSchema(program: ProgramSettings) {
+export function buildExpenseSchema(program: ProgramSettings, categories: CategoryIndex) {
   return expenseFormBaseSchema.superRefine((values, ctx) => {
     const date = new Date(values.date);
     if (Number.isNaN(date.getTime()) || !isDateWithinProgram(program, date)) {
@@ -33,6 +35,10 @@ export function buildExpenseSchema(program: ProgramSettings) {
         path: ["date"],
         message: `Date must fall within the program (${format(programStartDate(program), "MMM d, yyyy")} – ${format(programEndDate(program), "MMM d, yyyy")})`,
       });
+    }
+    // Every purchase needs a payment type; income received doesn't have one.
+    if (!categories.isIncome(values.category) && !values.paymentType) {
+      ctx.addIssue({ code: "custom", path: ["paymentType"], message: "Pick how this was paid" });
     }
   });
 }
