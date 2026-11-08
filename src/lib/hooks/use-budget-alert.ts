@@ -16,7 +16,7 @@ export function useBudgetAlert(weekNumber: number | null, actualCents: number, t
   const firedRef = React.useRef<Set<string>>(new Set());
 
   React.useEffect(() => {
-    if (!weekNumber || !targetCents || targetCents <= 0) return;
+    if (weekNumber === null || !targetCents || targetCents <= 0) return;
     const status = computeBudgetStatus(actualCents, targetCents);
     if (status === "good") return;
 
@@ -26,9 +26,9 @@ export function useBudgetAlert(weekNumber: number | null, actualCents: number, t
 
     const message =
       status === "critical"
-        ? `Week ${weekNumber} is over budget — ${formatCents(actualCents)} of ${formatCents(targetCents)}`
+        ? `Week ${weekNumber} is over plan — ${formatCents(actualCents)} of ${formatCents(targetCents)}`
         : `Week ${weekNumber} is ${BUDGET_STATUS_LABEL[status].toLowerCase()} — ${formatCents(actualCents)} of ${formatCents(targetCents)}`;
 
-    toast(message, { description: status === "critical" ? "Over the weekly target." : "Getting close to the weekly target." });
+    toast(message, { description: status === "critical" ? "Over this week's plan." : "Getting close to this week's plan." });
   }, [weekNumber, actualCents, targetCents]);
 }

@@ -1,36 +1,33 @@
 "use client";
 
-import Link from "next/link";
+import { FileSpreadsheet } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { PartyPopper } from "lucide-react";
 
 import { useSettings } from "@/lib/hooks/use-settings";
-import { Button } from "@/components/ui/button";
+import { useWorkbook } from "@/lib/hooks/use-workbook";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LoadWorkbookButton } from "@/components/shared/load-workbook-button";
 
 /**
- * Gates every route except /settings until the family has completed the
- * one-time family name + program setup — there's nothing meaningful to
- * show a dashboard or expense list for before that exists.
+ * Every screen except Settings waits for the family's spending plan to be
+ * loaded: the categories, dates and plan amounts all come from it, so there
+ * is nothing meaningful to show before that.
  */
 export function OnboardingGate({ children }: { children: React.ReactNode }) {
-  const { settings, loaded } = useSettings();
+  const { loaded } = useSettings();
+  const { ready, record } = useWorkbook();
   const pathname = usePathname();
 
-  if (!loaded) return null;
+  if (!loaded || !ready) return null;
 
-  if (!settings.onboarded && pathname !== "/settings") {
+  if (!record && pathname !== "/settings") {
     return (
       <div className="mx-auto flex max-w-lg flex-1 items-center px-4 py-16">
         <EmptyState
-          icon={PartyPopper}
-          title="Welcome — let's get set up"
-          description="Enter your family name and program dates to start tracking expenses. It takes under a minute."
-          action={
-            <Button asChild>
-              <Link href="/settings">Set up now</Link>
-            </Button>
-          }
+          icon={FileSpreadsheet}
+          title="Load your spending plan"
+          description="Pick your family's Weekly Spending Plan spreadsheet (.xlsx) from your Teams folder. The app uses its categories and dates, and saves your entries back into it."
+          action={<LoadWorkbookButton />}
         />
       </div>
     );

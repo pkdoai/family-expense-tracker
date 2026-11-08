@@ -1,5 +1,6 @@
-import { getCategory } from "@/lib/domain/categories";
-import type { CategoryId } from "@/lib/domain/types";
+"use client";
+
+import { useCategories } from "@/lib/hooks/use-workbook";
 import { cn } from "@/lib/utils";
 
 /**
@@ -8,39 +9,29 @@ import { cn } from "@/lib/utils";
  * assembled at runtime (`text-${colorVar}`), so that pattern would silently
  * produce no styling at all once the app is built for production.
  */
-export function categoryColorVar(category: CategoryId): string {
-  return `var(--${getCategory(category).colorVar})`;
+export function useCategoryColor(): (id: string) => string {
+  const categories = useCategories();
+  return (id) => `var(--${categories.get(id).colorVar})`;
 }
 
-export function CategoryIcon({
-  category,
-  className,
-  size = 16,
-}: {
-  category: CategoryId;
-  className?: string;
-  size?: number;
-}) {
-  const Icon = getCategory(category).icon;
-  return (
-    <Icon
-      size={size}
-      className={cn(className)}
-      style={{ color: categoryColorVar(category) }}
-      strokeWidth={1.75}
-    />
-  );
+export function CategoryIcon({ category, className, size = 16 }: { category: string; className?: string; size?: number }) {
+  const categories = useCategories();
+  const def = categories.get(category);
+  const Icon = def.icon;
+  return <Icon size={size} className={cn(className)} style={{ color: `var(--${def.colorVar})` }} strokeWidth={1.75} />;
 }
 
-export function CategoryDot({ category, className }: { category: CategoryId; className?: string }) {
+export function CategoryDot({ category, className }: { category: string; className?: string }) {
+  const categories = useCategories();
   return (
     <span
       className={cn("inline-block size-2 rounded-[2px]", className)}
-      style={{ backgroundColor: categoryColorVar(category) }}
+      style={{ backgroundColor: `var(--${categories.get(category).colorVar})` }}
     />
   );
 }
 
-export function CategoryLabel({ category }: { category: CategoryId }) {
-  return <span>{getCategory(category).label}</span>;
+export function CategoryLabel({ category }: { category: string }) {
+  const categories = useCategories();
+  return <span>{categories.get(category).label}</span>;
 }

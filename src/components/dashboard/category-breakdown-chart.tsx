@@ -2,8 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-import { CATEGORIES } from "@/lib/domain/categories";
-import { categoryColorVar } from "@/components/shared/category-icon";
+import { useCategories } from "@/lib/hooks/use-workbook";
 import { formatCents } from "@/lib/domain/currency";
 import type { CategoryId } from "@/lib/domain/types";
 
@@ -14,7 +13,8 @@ interface Row {
 }
 
 export function CategoryBreakdownChart({ totals }: { totals: Partial<Record<CategoryId, number>> }) {
-  const rows: Row[] = CATEGORIES.map((c) => ({ category: c.id, label: c.label, cents: totals[c.id] ?? 0 }))
+  const categories = useCategories();
+  const rows: Row[] = categories.expenseList.map((c) => ({ category: c.id, label: c.label, cents: totals[c.id] ?? 0 }))
     .filter((r) => r.cents > 0)
     .sort((a, b) => b.cents - a.cents);
 
@@ -30,7 +30,7 @@ export function CategoryBreakdownChart({ totals }: { totals: Partial<Record<Cate
         <YAxis
           type="category"
           dataKey="label"
-          width={116}
+          width={150}
           axisLine={false}
           tickLine={false}
           tick={{ fontSize: 12.5, fill: "var(--foreground)" }}
@@ -47,7 +47,7 @@ export function CategoryBreakdownChart({ totals }: { totals: Partial<Record<Cate
         />
         <Bar dataKey="cents" radius={[4, 4, 4, 4]} maxBarSize={9}>
           {rows.map((row) => (
-            <Cell key={row.category} fill={categoryColorVar(row.category)} />
+            <Cell key={row.category} fill={`var(--${categories.get(row.category).colorVar})`} />
           ))}
         </Bar>
       </BarChart>

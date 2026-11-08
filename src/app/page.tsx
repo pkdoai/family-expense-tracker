@@ -5,6 +5,8 @@ import { CalendarRange, Receipt } from "lucide-react";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useExpenses } from "@/lib/hooks/use-expenses";
 import { useBudgetAlert } from "@/lib/hooks/use-budget-alert";
+import { useWorkbook } from "@/lib/hooks/use-workbook";
+import { spendingOnly, weekPlanCents } from "@/lib/domain/plan-stats";
 import {
   totalCents,
   categoryTotals,
@@ -12,15 +14,15 @@ import {
   expensesInWeek,
   weeklyTrend,
 } from "@/lib/domain/dashboard-stats";
-import { getProgramProgress } from "@/lib/domain/week";
+import { getProgramProgress, weekNumbers, lastWeekNumber } from "@/lib/domain/week";
 import { formatCents } from "@/lib/domain/currency";
-import { getCategory } from "@/lib/domain/categories";
 
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { BudgetCard } from "@/components/dashboard/budget-card";
 import { CategoryBreakdownChart } from "@/components/dashboard/category-breakdown-chart";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { RecentExpenses } from "@/components/dashboard/recent-expenses";
+import { PlanVsActual } from "@/components/dashboard/plan-vs-actual";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
@@ -28,8 +30,12 @@ import { StatTileSkeleton, ListRowSkeleton } from "@/components/shared/loading-s
 
 export default function DashboardPage() {
   const { settings, loaded: settingsLoaded } = useSettings();
-  const { expenses, loading: expensesLoading } = useExpenses();
-  const { program, budget } = settings;
+  const { expenses: allEntries, loading: expensesLoading } = useExpenses();
+  const { summary, categories } = useWorkbook();
+  const { program } = settings;
+
+  // Income entries are recorded too, but they're never counted as money spent.
+  const expenses = spendingOnly(allEntries, categories);
 
   const progress = getProgramProgress(program);
   const currentWeek = progress.currentWeek;
@@ -37,11 +43,13 @@ export default function DashboardPage() {
   const spentTotal = totalCents(expenses);
   const totals = categoryTotals(expenses);
   const top = topCategory(totals);
-  const weekExpenses = currentWeek ? expensesInWeek(expenses, program, currentWeek) : [];
+  const weekExpenses = currentWeek !== null ? expensesInWeek(expenses, program, currentWeek) : [];
   const weekTotal = totalCents(weekExpenses);
-  const trend = currentWeek ? weeklyTrend(expenses, program, currentWeek, budget.weeklyBudgetCents) : [];
+  const planForWeek = (week: number) => weekPlanCents(summary, week);
+  const trend = currentWeek !== null ? weeklyTrend(expenses, program, currentWeek, planForWeek) : [];
+  const weekPlan = currentWeek !== null ? planForWeek(currentWeek) : null;
 
-  useBudgetAlert(currentWeek, weekTotal, budget.weeklyBudgetCents);
+  useBudgetAlert(currentWeek, weekTotal, weekPlan);
 
   const loading = !settingsLoaded || expensesLoading;
 
@@ -62,7 +70,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (expenses.length === 0) {
+  if (allEntries.length === 0) {
     return (
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
         <EmptyState
@@ -86,18 +94,18 @@ export default function DashboardPage() {
         />
         <StatTile
           label="This Week's Spend"
-          value={currentWeek ? formatCents(weekTotal) : "—"}
-          sub={currentWeek ? `Week ${currentWeek} of ${program.lengthWeeks}` : "Program hasn't started"}
+          value={currentWeek !== null ? formatCents(weekTotal) : "—"}
+          sub={currentWeek !== null ? `Week ${currentWeek} of ${lastWeekNumber(program)}` : "Program hasn't started"}
         />
         <StatTile
           label="Top Category"
-          value={top ? getCategory(top.category).label : "—"}
+          value={top ? categories.get(top.category).label : "—"}
           sub={top ? formatCents(top.cents) : "No spending yet"}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <BudgetCard actualCents={weekTotal} targetCents={budget.weeklyBudgetCents} className="lg:col-span-1" />
+        <BudgetCard actualCents={weekTotal} targetCents={weekPlan} className="lg:col-span-1" />
         <Card className="p-5 lg:col-span-2">
           <p className="font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Category Breakdown
@@ -111,7 +119,7 @@ export default function DashboardPage() {
       <Card className="p-5">
         <div className="flex items-center justify-between">
           <p className="font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {program.lengthWeeks}-Week Trend
+            Weekly Spending vs. Plan
           </p>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -121,11 +129,15 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="mt-3">
-          <TrendChart trend={trend} lengthWeeks={program.lengthWeeks} weeklyBudgetCents={budget.weeklyBudgetCents} />
+          <TrendChart trend={trend} weeks={weekNumbers(program)} planForWeek={planForWeek} />
         </div>
       </Card>
 
-      <RecentExpenses expenses={expenses} />
+      {summary && currentWeek !== null && (
+        <PlanVsActual weekExpenses={weekExpenses} week={currentWeek} summary={summary} />
+      )}
+
+      <RecentExpenses expenses={allEntries} />
     </div>
   );
 }

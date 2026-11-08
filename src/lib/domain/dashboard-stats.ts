@@ -1,5 +1,5 @@
 import type { CategoryId, Expense, ProgramSettings } from "@/lib/domain/types";
-import { weekNumberForDate } from "@/lib/domain/week";
+import { weekNumberForDate, weekNumbers } from "@/lib/domain/week";
 import { computeBudgetStatus } from "@/lib/domain/budget-status";
 import type { BudgetStatus } from "@/lib/domain/types";
 
@@ -41,15 +41,16 @@ export function weeklyTrend(
   expenses: Expense[],
   program: ProgramSettings,
   throughWeek: number,
-  weeklyBudgetCents: number | null,
+  targetForWeek: (week: number) => number | null,
 ): WeeklyTrendPoint[] {
   const points: WeeklyTrendPoint[] = [];
-  for (let week = 1; week <= throughWeek; week++) {
+  for (const week of weekNumbers(program)) {
+    if (week > throughWeek) break;
     const total = totalCents(expensesInWeek(expenses, program, week));
     points.push({
       week,
       totalCents: total,
-      status: computeBudgetStatus(total, weeklyBudgetCents ?? 0),
+      status: computeBudgetStatus(total, targetForWeek(week) ?? 0),
     });
   }
   return points;

@@ -28,8 +28,8 @@ export function BudgetCard({ actualCents, targetCents, className }: { actualCent
   if (!targetCents) {
     return (
       <Card className={className + " flex flex-col justify-center p-5"}>
-        <p className="font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground">This Week&rsquo;s Budget</p>
-        <p className="mt-2 text-sm text-muted-foreground">No weekly target set yet.</p>
+        <p className="font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground">This Week&rsquo;s Plan</p>
+        <p className="mt-2 text-sm text-muted-foreground">No planned amounts entered for this week in the spreadsheet yet.</p>
       </Card>
     );
   }
@@ -41,7 +41,7 @@ export function BudgetCard({ actualCents, targetCents, className }: { actualCent
   return (
     <Card className={(className ?? "") + " p-5"}>
       <div className="flex items-center justify-between">
-        <p className="font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground">This Week&rsquo;s Budget</p>
+        <p className="font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground">This Week&rsquo;s Plan</p>
         <Badge variant={STATUS_VARIANT[status]}>
           <Icon className="size-3" />
           {BUDGET_STATUS_LABEL[status]}
@@ -49,7 +49,7 @@ export function BudgetCard({ actualCents, targetCents, className }: { actualCent
       </div>
       <div className="mt-2 flex items-baseline gap-1.5">
         <span className="font-mono text-xl font-semibold tabular-nums">{formatCents(actualCents)}</span>
-        <span className="text-sm text-muted-foreground">of {formatCents(targetCents)} target</span>
+        <span className="text-sm text-muted-foreground">of {formatCents(targetCents)} planned</span>
       </div>
       <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-muted">
         <div

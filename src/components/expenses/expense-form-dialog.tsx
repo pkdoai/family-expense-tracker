@@ -19,12 +19,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  SelectGroup,
+  SelectLabel,
+} from "@/components/ui/select";
 import { CategoryIcon } from "@/components/shared/category-icon";
 
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useExpenses } from "@/lib/hooks/use-expenses";
-import { CATEGORIES, categoryAllowsDetails } from "@/lib/domain/categories";
+import { useCategories } from "@/lib/hooks/use-workbook";
+import { SECTION_LABEL } from "@/lib/domain/categories";
+import { PAYMENT_TYPES, WorkbookError } from "@/lib/workbook";
 import { buildExpenseSchema, type ExpenseFormValues } from "@/lib/validation/expense-schema";
 import { programStartDate, programEndDate } from "@/lib/domain/week";
 import { dollarsToCents, centsToDollars } from "@/lib/domain/currency";
@@ -56,7 +66,9 @@ export function ExpenseFormDialog({
   const { addExpense, updateExpense } = useExpenses();
   const isEdit = Boolean(expense);
 
-  const schema = React.useMemo(() => buildExpenseSchema(settings.program), [settings.program]);
+  const categories = useCategories();
+  const schema = React.useMemo(() => buildExpenseSchema(settings.program, categories), [settings.program, categories]);
+  const firstCategoryId = categories.list[0]?.id ?? "";
 
   const {
     register,
@@ -70,10 +82,9 @@ export function ExpenseFormDialog({
     defaultValues: {
       date: format(new Date(), "yyyy-MM-dd"),
       amount: undefined,
-      category: "groceries",
+      category: firstCategoryId,
       description: "",
-      subcategory: "",
-      paymentMethod: "",
+      paymentType: undefined,
     },
   });
 
@@ -94,8 +105,7 @@ export function ExpenseFormDialog({
         amount: centsToDollars(expense.amountCents),
         category: expense.category,
         description: expense.description,
-        subcategory: expense.subcategory ?? "",
-        paymentMethod: expense.paymentMethod ?? "",
+        paymentType: expense.paymentType,
       });
       photoRepository.listByExpense(expense.id).then((photos) => {
         setExistingPhotos(photos.map((p) => ({ id: p.id, url: URL.createObjectURL(p.blob) })));
@@ -104,10 +114,9 @@ export function ExpenseFormDialog({
       reset({
         date: format(new Date(), "yyyy-MM-dd"),
         amount: undefined,
-        category: "groceries",
+        category: firstCategoryId,
         description: "",
-        subcategory: "",
-        paymentMethod: "",
+        paymentType: undefined,
       });
       setExistingPhotos([]);
     }
@@ -134,8 +143,7 @@ export function ExpenseFormDialog({
       amountCents: dollarsToCents(values.amount),
       category: values.category,
       description: values.description,
-      subcategory: category === "other" && values.subcategory ? values.subcategory : undefined,
-      paymentMethod: category === "other" && values.paymentMethod ? values.paymentMethod : undefined,
+      paymentType: categories.isIncome(values.category) ? undefined : values.paymentType,
       photoIds: remainingExisting.map((p) => p.id),
     };
 
@@ -148,8 +156,10 @@ export function ExpenseFormDialog({
         toast.success("Expense added");
       }
       onOpenChange(false);
-    } catch {
-      toast.error("Something went wrong saving that expense — please try again.");
+    } catch (err) {
+      toast.error(
+        err instanceof WorkbookError ? err.message : "Something went wrong saving that expense — please try again.",
+      );
     }
   }
 
@@ -162,7 +172,7 @@ export function ExpenseFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit expense" : "Add expense"}</DialogTitle>
           <DialogDescription>
-            {isEdit ? "Update the details below." : `Logged against ${settings.family.familyName || "your family"}'s ${settings.program.lengthWeeks}-week program.`}
+            {isEdit ? "Update the details below." : `Added to ${settings.family.familyName || "your family"}'s spending plan.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -202,30 +212,58 @@ export function ExpenseFormDialog({
                     <SelectValue placeholder="Choose a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <span className="flex items-center gap-2">
-                          <CategoryIcon category={c.id} size={15} />
-                          {c.label}
-                        </span>
-                      </SelectItem>
-                    ))}
+                    {(["fixed", "variable", "income"] as const).map((section) => {
+                      const items = categories.list.filter((c) => c.section === section);
+                      if (items.length === 0) return null;
+                      return (
+                        <SelectGroup key={section}>
+                          <SelectLabel>{SECTION_LABEL[section]}</SelectLabel>
+                          {items.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              <span className="flex items-center gap-2">
+                                <CategoryIcon category={c.id} size={15} />
+                                {c.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               )}
             />
           </div>
 
-          {categoryAllowsDetails(category) && (
-            <div className="grid grid-cols-2 gap-3 rounded-md border border-border bg-muted/50 p-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="expense-subcategory">Sub-category</Label>
-                <Input id="expense-subcategory" placeholder="e.g. Pharmacy" {...register("subcategory")} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="expense-payment">Paid with</Label>
-                <Input id="expense-payment" placeholder="e.g. Visa •• 4471" {...register("paymentMethod")} />
-              </div>
+          {!categories.isIncome(category) && (
+            <div className="space-y-1.5">
+              <Label>How was it paid?</Label>
+              <Controller
+                control={control}
+                name="paymentType"
+                render={({ field }) => (
+                  <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="How was it paid?">
+                    {PAYMENT_TYPES.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={field.value === p.id}
+                        onClick={() => field.onChange(p.id)}
+                        className={
+                          "rounded-md border px-3 py-2 text-sm font-medium transition-colors " +
+                          (field.value === p.id
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-input text-muted-foreground hover:border-primary/50")
+                        }
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              />
+              {errors.paymentType && <p className="text-xs text-destructive">{errors.paymentType.message}</p>}
             </div>
           )}
 

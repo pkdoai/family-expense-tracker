@@ -20,6 +20,8 @@ import { formatCents } from "@/lib/domain/currency";
 import { useExpenses } from "@/lib/hooks/use-expenses";
 import { SearchX } from "lucide-react";
 import type { Expense } from "@/lib/domain/types";
+import { useCategories } from "@/lib/hooks/use-workbook";
+import { paymentTypeLabel, writesEqual } from "@/lib/workbook";
 
 function formatFullDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -28,6 +30,7 @@ function formatFullDate(iso: string): string {
 
 export function ExpenseList({ expenses, hasAnyExpenses }: { expenses: Expense[]; hasAnyExpenses: boolean }) {
   const { removeExpense } = useExpenses();
+  const categories = useCategories();
   const [editing, setEditing] = React.useState<Expense | null>(null);
   const [deleting, setDeleting] = React.useState<Expense | null>(null);
 
@@ -70,7 +73,13 @@ export function ExpenseList({ expenses, hasAnyExpenses }: { expenses: Expense[];
               <p className="truncate text-sm font-medium">{expense.description}</p>
               <p className="text-xs text-muted-foreground">
                 <CategoryLabel category={expense.category} /> &middot; {formatFullDate(expense.date)}
-                {expense.subcategory ? ` · ${expense.subcategory}` : ""}
+                {" · "}
+                {categories.isIncome(expense.category)
+                  ? "Income"
+                  : expense.paymentType
+                    ? paymentTypeLabel(expense.paymentType)
+                    : "—"}
+                {writesEqual(expense.committed, expense.write) ? "" : " · not saved to spreadsheet yet"}
               </p>
             </div>
             {expense.photoIds.length > 0 ? (
@@ -114,6 +123,9 @@ export function ExpenseList({ expenses, hasAnyExpenses }: { expenses: Expense[];
             <>
               This will permanently remove &ldquo;{deleting.description}&rdquo; ({formatCents(deleting.amountCents)}) and
               any attached receipt photo. This can&rsquo;t be undone.
+              {deleting.committed
+                ? " It's already in your saved spreadsheet, so it will be taken out of it the next time you Finish & save."
+                : ""}
             </>
           ) : null
         }

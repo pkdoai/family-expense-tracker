@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 import type { Expense, ExpensePhoto } from "@/lib/domain/types";
+import type { WorkbookRecord } from "@/lib/storage/workbook-repository";
 
 interface ExpenseTrackerDB extends DBSchema {
   expenses: {
@@ -13,10 +14,15 @@ interface ExpenseTrackerDB extends DBSchema {
     value: ExpensePhoto;
     indexes: { "by-expense": string };
   };
+  /** At most one record, id "current": the loaded spending plan workbook. */
+  workbook: {
+    key: string;
+    value: WorkbookRecord;
+  };
 }
 
 const DB_NAME = "family-expense-tracker";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<ExpenseTrackerDB>> | null = null;
 
@@ -40,6 +46,10 @@ export function getDb(): Promise<IDBPDatabase<ExpenseTrackerDB>> {
         if (!db.objectStoreNames.contains("photos")) {
           const store = db.createObjectStore("photos", { keyPath: "id" });
           store.createIndex("by-expense", "expenseId");
+        }
+        // v2: the spending plan workbook (added without touching existing data).
+        if (!db.objectStoreNames.contains("workbook")) {
+          db.createObjectStore("workbook", { keyPath: "id" });
         }
       },
     });

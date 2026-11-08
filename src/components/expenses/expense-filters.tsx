@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { CategoryIcon } from "@/components/shared/category-icon";
-import { CATEGORIES } from "@/lib/domain/categories";
+import { useCategories } from "@/lib/hooks/use-workbook";
+import { weekNumbers } from "@/lib/domain/week";
+import type { ProgramSettings } from "@/lib/domain/types";
 import type { ExpenseFilters } from "@/lib/domain/types";
 
 const NO_FILTERS: ExpenseFilters = {
@@ -22,12 +24,13 @@ export { NO_FILTERS };
 export function ExpenseFiltersBar({
   filters,
   onChange,
-  lengthWeeks,
+  program,
 }: {
   filters: ExpenseFilters;
   onChange: (filters: ExpenseFilters) => void;
-  lengthWeeks: number;
+  program: ProgramSettings;
 }) {
+  const categories = useCategories();
   const hasActiveFilters =
     filters.search !== "" || filters.category !== "all" || filters.week !== "all";
 
@@ -52,7 +55,7 @@ export function ExpenseFiltersBar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All categories</SelectItem>
-          {CATEGORIES.map((c) => (
+          {categories.list.map((c) => (
             <SelectItem key={c.id} value={c.id}>
               <span className="flex items-center gap-2">
                 <CategoryIcon category={c.id} size={14} />
@@ -72,7 +75,7 @@ export function ExpenseFiltersBar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All weeks</SelectItem>
-          {Array.from({ length: lengthWeeks }, (_, i) => i + 1).map((w) => (
+          {weekNumbers(program).map((w) => (
             <SelectItem key={w} value={String(w)}>
               Week {w}
             </SelectItem>

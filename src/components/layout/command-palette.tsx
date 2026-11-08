@@ -19,12 +19,14 @@ import { ExpenseFormDialog } from "@/components/expenses/expense-form-dialog";
 
 import { useCommandPalette } from "@/lib/hooks/use-command-palette";
 import { useSettings } from "@/lib/hooks/use-settings";
-import { CATEGORIES } from "@/lib/domain/categories";
+import { useCategories } from "@/lib/hooks/use-workbook";
+import { weekNumbers } from "@/lib/domain/week";
 
 export function CommandPalette() {
   const { open, setOpen } = useCommandPalette();
   const router = useRouter();
   const { settings } = useSettings();
+  const categories = useCategories();
   const [addExpenseOpen, setAddExpenseOpen] = React.useState(false);
 
   function go(path: string) {
@@ -67,7 +69,7 @@ export function CommandPalette() {
           </CommandGroup>
           <CommandSeparator />
           <CommandGroup heading="Jump to a week">
-            {Array.from({ length: settings.program.lengthWeeks }, (_, i) => i + 1).map((week) => (
+            {weekNumbers(settings.program).map((week) => (
                 <CommandItem key={week} onSelect={() => go(`/expenses?week=${week}`)}>
                   <CalendarRange />
                   Week {week}
@@ -76,7 +78,7 @@ export function CommandPalette() {
           </CommandGroup>
           <CommandSeparator />
           <CommandGroup heading="Filter by category">
-            {CATEGORIES.map((c) => (
+            {categories.list.map((c) => (
               <CommandItem key={c.id} onSelect={() => go(`/expenses?category=${c.id}`)}>
                 <CategoryIcon category={c.id} size={15} />
                 {c.label}

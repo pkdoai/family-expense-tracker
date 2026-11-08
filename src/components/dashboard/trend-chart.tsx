@@ -6,7 +6,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  ReferenceLine,
+  Line,
   ReferenceArea,
   Tooltip,
   ResponsiveContainer,
@@ -25,6 +25,7 @@ const STATUS_COLOR: Record<BudgetStatus, string> = {
 interface ChartPoint {
   week: number;
   dollars: number | null;
+  plan: number | null;
   status: BudgetStatus;
 }
 
@@ -36,35 +37,42 @@ function TrendDot(props: { cx?: number; cy?: number; payload?: ChartPoint }) {
 
 export function TrendChart({
   trend,
-  lengthWeeks,
-  weeklyBudgetCents,
+  weeks,
+  planForWeek,
 }: {
   trend: WeeklyTrendPoint[];
-  lengthWeeks: number;
-  weeklyBudgetCents: number | null;
+  /** Every week number in the program, in order. */
+  weeks: number[];
+  /** What the spending plan says for a week, in cents (null when nothing is planned). */
+  planForWeek: (week: number) => number | null;
 }) {
-  const lastActualWeek = trend.length > 0 ? trend[trend.length - 1].week : 0;
+  const firstWeek = weeks[0] ?? 0;
+  const lastWeek = weeks[weeks.length - 1] ?? 0;
+  const lastActualWeek = trend.length > 0 ? trend[trend.length - 1].week : firstWeek - 1;
 
-  const data: ChartPoint[] = Array.from({ length: lengthWeeks }, (_, i) => {
-    const week = i + 1;
+  const data: ChartPoint[] = weeks.map((week) => {
     const point = trend.find((p) => p.week === week);
-    return { week, dollars: point ? point.totalCents / 100 : null, status: point?.status ?? "good" };
+    const plan = planForWeek(week);
+    return {
+      week,
+      dollars: point ? point.totalCents / 100 : null,
+      plan: plan === null ? null : plan / 100,
+      status: point?.status ?? "good",
+    };
   });
 
   return (
     <ResponsiveContainer width="100%" height={230}>
       <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
         <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="0" />
-        {lastActualWeek < lengthWeeks && (
-          <ReferenceArea x1={lastActualWeek + 0.5} x2={lengthWeeks} fill="var(--muted)" fillOpacity={0.5} />
+        {lastActualWeek < lastWeek && (
+          <ReferenceArea x1={lastActualWeek + 0.5} x2={lastWeek} fill="var(--muted)" fillOpacity={0.5} />
         )}
         <XAxis
           dataKey="week"
           type="number"
-          domain={[1, lengthWeeks]}
-          ticks={Array.from({ length: lengthWeeks }, (_, i) => i + 1).filter(
-            (w) => w === 1 || w === lengthWeeks || w % Math.max(1, Math.round(lengthWeeks / 6)) === 0,
-          )}
+          domain={[firstWeek, lastWeek]}
+          ticks={weeks.filter((w) => w === firstWeek || w === lastWeek || w % Math.max(1, Math.round(weeks.length / 6)) === 0)}
           tickFormatter={(w) => `W${w}`}
           tickLine={false}
           axisLine={{ stroke: "var(--border)" }}
@@ -87,17 +95,21 @@ export function TrendChart({
             fontSize: 12.5,
           }}
         />
-        {weeklyBudgetCents ? (
-          <ReferenceLine
-            y={weeklyBudgetCents / 100}
-            stroke="var(--muted-foreground)"
-            strokeDasharray="5 4"
-            label={{ value: `$${(weeklyBudgetCents / 100).toFixed(0)} budget`, position: "insideTopRight", fontSize: 11, fill: "var(--muted-foreground)" }}
-          />
-        ) : null}
+        <Line
+          type="stepAfter"
+          dataKey="plan"
+          name="Plan"
+          stroke="var(--muted-foreground)"
+          strokeDasharray="5 4"
+          strokeWidth={1.5}
+          dot={false}
+          connectNulls
+          isAnimationActive={false}
+        />
         <Area
           type="monotone"
           dataKey="dollars"
+          name="Spent"
           stroke="var(--primary)"
           strokeWidth={2.25}
           fill="var(--primary)"
